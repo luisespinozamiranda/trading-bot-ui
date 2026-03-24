@@ -1,0 +1,55 @@
+services:
+  ui:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ""
+        VITE_API_KEY: ${TRADING_API_KEY:-changeme-dev-only}
+    ports:
+      - "3000:80"
+    depends_on:
+      - trading-bot-api
+    networks:
+      - trading-net
+
+  trading-bot-api:
+    build:
+      context: ../trading-bot
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/tradingbot
+      - DB_USERNAME=trading
+      - DB_PASSWORD=trading
+      - TRADING_API_KEY=${TRADING_API_KEY:-changeme-dev-only}
+      - TRADING_SECURITY_ENABLED=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trading-net
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tradingbot
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: trading
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading -d tradingbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trading-net
+
+volumes:
+  pgdata:
+
+networks:
+  trading-net:
+    driver: bridge
