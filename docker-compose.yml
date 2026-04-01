@@ -8,7 +8,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - trading-bot-api
+      trading-bot-api:
+        condition: service_healthy
     networks:
       - trading-net
 
@@ -21,11 +22,21 @@ services:
       - DB_PASSWORD=trading
       - TRADING_API_KEY=${TRADING_API_KEY:-changeme-dev-only}
       - TRADING_SECURITY_ENABLED=true
+      - TRADING_MODE=${TRADING_MODE:-PAPER}
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+      - BINANCE_TESTNET_API_KEY=${BINANCE_TESTNET_API_KEY:-}
+      - BINANCE_TESTNET_SECRET_KEY=${BINANCE_TESTNET_SECRET_KEY:-}
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - trading-net
 
@@ -47,8 +58,30 @@ services:
     networks:
       - trading-net
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+      - PGADMIN_SERVER_JSON_FILE=/pgadmin4/servers.json
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./docker/pgadmin/pgpass:/tmp/pgpass_src:ro
+    entrypoint: /bin/sh -c "cp /tmp/pgpass_src /tmp/pgpass && chmod 600 /tmp/pgpass && /entrypoint.sh"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trading-net
+
 volumes:
   pgdata:
+  pgadmin_data:
 
 networks:
   trading-net:

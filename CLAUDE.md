@@ -40,6 +40,7 @@ src/
 │   │   ├── useLiveTrades.ts        # GET /live/trades, /summary/* (poll 10s)
 │   │   ├── useStrategies.ts        # GET /strategies, /active, /enabled
 │   │   ├── useBacktestResults.ts   # GET /backtest/results, /{id}
+│   │   ├── useCandles.ts           # GET /data/candles (symbol, interval, limit)
 │   │   └── useDataStatus.ts        # GET /data/status, /settings
 │   └── types/              # TypeScript interfaces matching Java DTOs
 │       ├── account.ts      # AccountSnapshot, OpenPosition
@@ -49,7 +50,7 @@ src/
 │       ├── data.ts         # BackfillRequest, DataStatus, AppSetting
 │       └── common.ts       # ApiError, PaginatedResponse
 ├── components/
-│   ├── charts/             # EquityCurveChart (Recharts AreaChart)
+│   ├── charts/             # EquityCurveChart (Recharts), CandlestickChart (Lightweight Charts v5)
 │   ├── layout/             # AppLayout, Sidebar, TopBar, StatusBar
 │   ├── shared/             # EmptyState, LoadingSkeleton, PageHeader
 │   └── trading/            # MetricCard, PnlDisplay, StatusBadge, ParameterSlider
@@ -65,7 +66,8 @@ src/
 │   └── appStore.ts         # selectedSymbol, sidebarCollapsed (Zustand + persist)
 ├── lib/
 │   ├── constants.ts        # SYMBOLS, INTERVALS, STRATEGIES, POLLING_INTERVALS, DEFAULT_BACKTEST_PARAMS
-│   └── utils.ts            # cn(), formatCurrency(), formatPercent(), formatPrice(), etc.
+│   ├── indicators.ts       # calculateSMA(), calculateRSI() — client-side technical indicators
+│   └── utils.ts            # cn(), formatCurrency(), formatPercent(), formatPrice(), formatDuration(), etc.
 ├── App.tsx                 # Route definitions
 ├── main.tsx                # Entry: QueryClient, BrowserRouter, Toaster
 └── index.css               # Tailwind + CSS custom properties (design tokens)
@@ -75,13 +77,14 @@ src/
 
 | Path | Component | Backend Endpoints |
 |------|-----------|------------------|
-| `/` | Dashboard | `/account/snapshot`, `/live/status`, `/live/trades`, `/strategies/active/enabled`, `/live/summary/daily` |
+| `/` | Dashboard | `/account/snapshot`, `/live/status`, `/live/trades`, `/strategies/active/enabled`, `/live/summary/daily`, `/live/summary/total` |
+| `/chart` | ChartPage | `/data/candles`, `/live/trades` |
 | `/strategies` | StrategiesPage | `/strategies` + PUT deploy/reject |
 | `/strategies/active` | ActiveStrategiesPage | `/strategies/active` + POST assign + DELETE |
 | `/backtest` | BacktestPage | POST `/backtest/run/binance` + GET `/backtest/results` |
 | `/backtest/results` | BacktestResultsPage | `/backtest/results` |
 | `/backtest/:id` | BacktestDetailPage | `/backtest/{id}` |
-| `/live` | LiveTradingPage | `/live/status`, `/live/summary/total` + POST start/stop |
+| `/live` | LiveTradingPage | `/live/status`, `/live/summary/total` + POST start/stop/reload |
 | `/live/trades` | TradeLogsPage | `/live/trades` |
 | `/live/daily` | DailySummaryPage | `/live/summary/daily` |
 | `/data` | DataManagementPage | `/data/status` + POST backfill/sync |
@@ -175,13 +178,14 @@ docker compose up                    # UI at :3000, API at :8080, PG at :5432
 
 ## Known Gaps / TODO
 
-- **Candlestick chart**: Lightweight Charts is installed but not yet integrated (requires backend candle endpoint)
 - **Monte Carlo view**: API hook exists (`useRunMonteCarlo`) but no dedicated page yet
 - **Walk-forward optimization**: Backend supports it but no UI page yet
 - **Portfolio backtest**: API hook exists (`useRunPortfolioBacktest`) but no dedicated page yet
+- **Strategy optimization UI**: Backend has `/backtest/run/binance/optimize` but no UI page yet
+- **Strategy comparison UI**: Backend has `/backtest/run/binance/compare` but no UI page yet
+- **Tournament mode UI**: Backend has `/tournament/*` (8 endpoints) but no UI yet
 - **WebSocket**: Backend uses WS for Binance feed. Frontend currently polls REST. Future: add WS subscription for real-time trade updates.
-- **Backend CORS**: Needs to be configured in SecurityConfig.java for localhost:5173 (dev) and localhost:3000 (Docker)
-- **Backend equity curve**: BacktestResponse needs `equityCurve: EquityPoint[]` field for chart rendering
+- **Advanced chart indicators**: Backend calculates MACD, Bollinger Bands, ADX internally — could add these to the candlestick chart
 
 ## Commands
 
