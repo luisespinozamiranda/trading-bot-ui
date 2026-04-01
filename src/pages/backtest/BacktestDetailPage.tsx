@@ -6,7 +6,7 @@ import PnlDisplay from '@/components/trading/PnlDisplay'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
 import EquityCurveChart from '@/components/charts/EquityCurveChart'
 import { useBacktestById } from '@/api/hooks/useBacktestResults'
-import { formatPrice, formatCurrency } from '@/lib/utils'
+import { formatPrice, formatCurrency, formatDuration } from '@/lib/utils'
 import { format } from 'date-fns'
 
 export default function BacktestDetailPage() {
@@ -18,9 +18,9 @@ export default function BacktestDetailPage() {
 
   function exportCsv() {
     if (!result) return
-    const header = 'Entry Price,Exit Price,Net %,Net $,Entry Time,Exit Time,Duration\n'
+    const header = 'Direction,Entry Price,Exit Price,Net %,Net $,Entry Time,Exit Time,Duration\n'
     const rows = result.trades.map((t) =>
-      `${t.entryPrice},${t.exitPrice},${t.netProfitPercent.toFixed(2)},${t.netProfitAmount.toFixed(2)},${t.entryTime},${t.exitTime},${t.duration}`,
+      `${t.direction},${t.entryPrice},${t.exitPrice},${t.netProfitPercent.toFixed(2)},${t.netProfitAmount.toFixed(2)},${t.entryTime},${t.exitTime},${formatDuration(t.durationSeconds)}`,
     ).join('\n')
     const blob = new Blob([header + rows], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -90,11 +90,11 @@ export default function BacktestDetailPage() {
             <thead className="sticky top-0 bg-[var(--color-bg-tertiary)]">
               <tr className="text-[var(--color-text-muted)]">
                 <th className="text-left p-2 font-medium">#</th>
+                <th className="text-left p-2 font-medium">Direction</th>
                 <th className="text-right p-2 font-medium">Entry</th>
                 <th className="text-right p-2 font-medium">Exit</th>
                 <th className="text-right p-2 font-medium">Net %</th>
                 <th className="text-right p-2 font-medium">Net $</th>
-                <th className="text-right p-2 font-medium">Capital</th>
                 <th className="text-left p-2 font-medium">Entry Time</th>
                 <th className="text-left p-2 font-medium">Duration</th>
               </tr>
@@ -103,13 +103,13 @@ export default function BacktestDetailPage() {
               {result.trades.map((trade, i) => (
                 <tr key={i} className="border-t border-[var(--color-border)] hover:bg-[var(--color-surface)]">
                   <td className="p-2 text-[var(--color-text-muted)]">{i + 1}</td>
+                  <td className="p-2 text-left font-medium text-[var(--color-text-primary)]">{trade.direction}</td>
                   <td className="p-2 text-right font-mono text-[var(--color-text-primary)]">{formatPrice(trade.entryPrice)}</td>
                   <td className="p-2 text-right font-mono text-[var(--color-text-primary)]">{formatPrice(trade.exitPrice)}</td>
                   <td className="p-2 text-right"><PnlDisplay value={trade.netProfitPercent} type="percent" size="sm" /></td>
                   <td className="p-2 text-right"><PnlDisplay value={trade.netProfitAmount} size="sm" /></td>
-                  <td className="p-2 text-right font-mono text-[var(--color-text-secondary)]">{formatCurrency(trade.capitalAtEntry)}</td>
                   <td className="p-2 font-mono text-[var(--color-text-muted)]">{format(new Date(trade.entryTime), 'MM/dd HH:mm')}</td>
-                  <td className="p-2 text-[var(--color-text-muted)]">{trade.duration}</td>
+                  <td className="p-2 text-[var(--color-text-muted)]">{formatDuration(trade.durationSeconds)}</td>
                 </tr>
               ))}
             </tbody>

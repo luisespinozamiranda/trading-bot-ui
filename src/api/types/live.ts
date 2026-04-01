@@ -1,15 +1,32 @@
-export interface LiveTradingRequest {
+export interface EngineDetail {
   symbol: string
   interval: string
-  initialCapital: number
+  strategyName: string
+  running: boolean
+  hasOpenPosition: boolean
 }
 
 export interface LiveStatusResponse {
-  running: boolean
+  managerRunning: boolean
+  wsConnected: boolean
+  totalEquity: number
+  cashBalance: number
+  openPositions: number
+  engines: EngineDetail[]
+}
+
+export interface ReloadResult {
   symbol: string
   interval: string
-  currentCapital: number
-  openPositions: number
+  status: string
+}
+
+export interface ReloadResponse {
+  engines: ReloadResult[]
+  reloaded: number
+  skipped: number
+  removed: number
+  added: number
 }
 
 export interface TradeDecisionLog {

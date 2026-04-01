@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
+  BarChart3,
   Brain,
   FlaskConical,
   Activity,
@@ -14,6 +15,7 @@ import { useAppStore } from '@/stores/appStore'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/chart', icon: BarChart3, label: 'Chart' },
   { to: '/strategies', icon: Brain, label: 'Strategies' },
   { to: '/backtest', icon: FlaskConical, label: 'Backtest Lab' },
   { to: '/live', icon: Activity, label: 'Live Trading' },

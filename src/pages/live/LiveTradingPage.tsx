@@ -1,39 +1,215 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Play, Square, FileText, Calendar, ArrowRight } from 'lucide-react'
+import { Play, Square, FileText, Calendar, ArrowRight, Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import PageHeader from '@/components/shared/PageHeader'
 import MetricCard from '@/components/trading/MetricCard'
 import StatusBadge from '@/components/trading/StatusBadge'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
 import { useLiveStatus } from '@/api/hooks/useLiveStatus'
 import { useTotalSummary } from '@/api/hooks/useLiveTrades'
-import { useStartLiveTrading, useStopLiveTrading } from '@/api/hooks/mutations/useLiveMutations'
-import { SYMBOLS, INTERVALS } from '@/lib/constants'
+import { useStartLiveTrading, useStopLiveTrading, useReloadStrategies } from '@/api/hooks/mutations/useLiveMutations'
+import { formatCurrency } from '@/lib/utils'
+import type { EngineDetail } from '@/api/types'
+
+function EngineTable({ engines }: { engines: EngineDetail[] }) {
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
+          <th className="text-left py-2 font-medium">Symbol</th>
+          <th className="text-left py-2 font-medium">Interval</th>
+          <th className="text-left py-2 font-medium">Strategy</th>
+          <th className="text-center py-2 font-medium">Status</th>
+          <th className="text-center py-2 font-medium">Position</th>
+        </tr>
+      </thead>
+      <tbody>
+        {engines.map((engine) => (
+          <EngineRow key={`${engine.symbol}-${engine.interval}`} engine={engine} />
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function EngineRow({ engine }: { engine: EngineDetail }) {
+  return (
+    <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface)] transition-colors">
+      <td className="py-2 font-mono text-[var(--color-text-primary)]">{engine.symbol}</td>
+      <td className="py-2 text-[var(--color-text-secondary)]">{engine.interval}</td>
+      <td className="py-2 text-[var(--color-text-secondary)]">{engine.strategyName}</td>
+      <td className="py-2 text-center">
+        <StatusBadge status={engine.running ? 'RUNNING' : 'STOPPED'} />
+      </td>
+      <td className="py-2 text-center">
+        <span className={engine.hasOpenPosition ? 'text-[var(--color-success)]' : 'text-[var(--color-text-muted)]'}>
+          {engine.hasOpenPosition ? 'OPEN' : '--'}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
+function WsIndicator({ connected }: { connected: boolean }) {
+  const Icon = connected ? Wifi : WifiOff
+  const color = connected ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+  const label = connected ? 'WS Connected' : 'WS Disconnected'
+
+  return (
+    <span className={`flex items-center gap-1 text-xs ${color}`}>
+      <Icon size={12} /> {label}
+    </span>
+  )
+}
+
+function EngineEmptyState() {
+  return (
+    <div className="text-center py-8">
+      <p className="text-sm text-[var(--color-text-muted)]">
+        No active strategy assignments.
+      </p>
+      <Link
+        to="/strategies/active"
+        className="text-xs text-[var(--color-accent)] hover:underline mt-2 inline-block"
+      >
+        Go to Active Strategies to assign strategies.
+      </Link>
+    </div>
+  )
+}
+
+interface EngineToggleButtonProps {
+  running: boolean
+  isPending: boolean
+  onStart: () => void
+  onStop: () => void
+}
+
+function EngineToggleButton({ running, isPending, onStart, onStop }: EngineToggleButtonProps) {
+  if (running) {
+    return (
+      <button
+        onClick={onStop}
+        disabled={isPending}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--color-danger)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+      >
+        <Square size={14} /> Stop Engine
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={onStart}
+      disabled={isPending}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--color-success)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+    >
+      <Play size={14} /> Start Engine
+    </button>
+  )
+}
+
+interface ReloadButtonProps {
+  isPending: boolean
+  onReload: () => void
+}
+
+function ReloadButton({ isPending, onReload }: ReloadButtonProps) {
+  return (
+    <button
+      onClick={onReload}
+      disabled={isPending}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-colors disabled:opacity-50"
+    >
+      <RefreshCw size={14} className={isPending ? 'animate-spin' : ''} /> Reload Strategies
+    </button>
+  )
+}
+
+interface EngineControlPanelProps {
+  status: {
+    managerRunning: boolean
+    wsConnected: boolean
+    totalEquity: number
+    cashBalance: number
+    engines: EngineDetail[]
+  } | undefined
+  isPending: boolean
+  reloadPending: boolean
+  onStart: () => void
+  onStop: () => void
+  onReload: () => void
+}
+
+function EngineControlPanel({ status, isPending, reloadPending, onStart, onStop, onReload }: EngineControlPanelProps) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Engine</h2>
+          <StatusBadge status={status?.managerRunning ? 'RUNNING' : 'STOPPED'} />
+          <WsIndicator connected={status?.wsConnected ?? false} />
+        </div>
+        <div className="flex items-center gap-2">
+          {status?.managerRunning && (
+            <ReloadButton isPending={reloadPending} onReload={onReload} />
+          )}
+          <EngineToggleButton
+            running={status?.managerRunning ?? false}
+            isPending={isPending}
+            onStart={onStart}
+            onStop={onStop}
+          />
+        </div>
+      </div>
+
+      {status?.managerRunning && (
+        <div className="mb-4 flex items-center gap-6 text-sm">
+          <span className="text-[var(--color-text-secondary)]">
+            Equity: <span className="font-mono text-[var(--color-text-primary)]">{formatCurrency(status.totalEquity)}</span>
+          </span>
+          <span className="text-[var(--color-text-secondary)]">
+            Cash: <span className="font-mono text-[var(--color-text-primary)]">{formatCurrency(status.cashBalance)}</span>
+          </span>
+          <span className="text-[var(--color-text-secondary)]">
+            Open: <span className="font-mono text-[var(--color-text-primary)]">{status.engines.filter(e => e.hasOpenPosition).length}</span>
+          </span>
+        </div>
+      )}
+
+      {status?.engines?.length ? (
+        <EngineTable engines={status.engines} />
+      ) : (
+        <EngineEmptyState />
+      )}
+    </div>
+  )
+}
 
 export default function LiveTradingPage() {
   const { data: status, isLoading } = useLiveStatus()
   const { data: summary } = useTotalSummary()
   const startMutation = useStartLiveTrading()
   const stopMutation = useStopLiveTrading()
-
-  const [symbol, setSymbol] = useState<string>(SYMBOLS[0])
-  const [interval, setInterval] = useState<string>(INTERVALS[5])
-  const [capital, setCapital] = useState(10000)
+  const reloadMutation = useReloadStrategies()
 
   function handleStart() {
-    startMutation.mutate(
-      { symbol, interval, initialCapital: capital },
-      {
-        onSuccess: () => toast.success('Trading engine started'),
-        onError: (err) => toast.error(err.message),
-      },
-    )
+    startMutation.mutate(undefined, {
+      onSuccess: () => toast.success('Trading engine started'),
+      onError: (err) => toast.error(err.message),
+    })
   }
 
   function handleStop() {
     stopMutation.mutate(undefined, {
       onSuccess: () => toast.success('Trading engine stopped'),
+      onError: (err) => toast.error(err.message),
+    })
+  }
+
+  function handleReload() {
+    reloadMutation.mutate(undefined, {
+      onSuccess: (res) => toast.success(`Reloaded: ${res.reloaded}, Added: ${res.added}, Removed: ${res.removed}`),
       onError: (err) => toast.error(err.message),
     })
   }
@@ -57,72 +233,22 @@ export default function LiveTradingPage() {
         }
       />
 
-      {/* Engine Control */}
-      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Engine</h2>
-            <StatusBadge status={status?.running ? 'RUNNING' : 'STOPPED'} />
-          </div>
-          {status?.running ? (
-            <button
-              onClick={handleStop}
-              disabled={stopMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--color-danger)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              <Square size={14} /> Stop Engine
-            </button>
-          ) : (
-            <button
-              onClick={handleStart}
-              disabled={startMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--color-success)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              <Play size={14} /> Start Engine
-            </button>
-          )}
+      <EngineControlPanel
+        status={status}
+        isPending={status?.managerRunning ? stopMutation.isPending : startMutation.isPending}
+        reloadPending={reloadMutation.isPending}
+        onStart={handleStart}
+        onStop={handleStop}
+        onReload={handleReload}
+      />
+
+      {status?.managerRunning && (
+        <div className="grid grid-cols-2 gap-4">
+          <MetricCard label="Total Equity" value={status.totalEquity} format="currency" trend="neutral" />
+          <MetricCard label="Cash Balance" value={status.cashBalance} format="currency" trend="neutral" />
         </div>
+      )}
 
-        {!status?.running && (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs text-[var(--color-text-secondary)]">Symbol</label>
-              <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="block w-full text-sm bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] rounded px-3 py-2">
-                {SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[var(--color-text-secondary)]">Interval</label>
-              <select value={interval} onChange={(e) => setInterval(e.target.value)} className="block w-full text-sm bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] rounded px-3 py-2">
-                {INTERVALS.map((i) => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[var(--color-text-secondary)]">Initial Capital</label>
-              <input type="number" value={capital} onChange={(e) => setCapital(Number(e.target.value))} className="block w-full text-sm font-mono bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] rounded px-3 py-2" />
-            </div>
-          </div>
-        )}
-
-        {status?.running && (
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-[var(--color-text-muted)] mb-1">Symbol</p>
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">{status.symbol}</p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--color-text-muted)] mb-1">Interval</p>
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">{status.interval}</p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--color-text-muted)] mb-1">Open Positions</p>
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">{status.openPositions}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Summary */}
       {summary && (
         <div className="grid grid-cols-4 gap-4">
           <MetricCard label="Total Entries" value={summary.entries} format="integer" trend="neutral" />
@@ -132,7 +258,6 @@ export default function LiveTradingPage() {
         </div>
       )}
 
-      {/* Quick Links */}
       <div className="grid grid-cols-2 gap-4">
         <Link to="/live/trades" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 hover:bg-[var(--color-surface)] transition-colors group">
           <div className="flex items-center justify-between">

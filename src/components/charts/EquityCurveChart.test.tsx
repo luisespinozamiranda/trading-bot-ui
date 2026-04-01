@@ -15,10 +15,10 @@ vi.mock('recharts', () => ({
 
 describe('EquityCurveChart', () => {
   const sampleData: EquityPoint[] = [
-    { timestamp: '2024-01-01T00:00:00', capital: 10000, drawdownPercent: 0 },
-    { timestamp: '2024-01-02T00:00:00', capital: 10500, drawdownPercent: 0 },
-    { timestamp: '2024-01-03T00:00:00', capital: 10200, drawdownPercent: -2.86 },
-    { timestamp: '2024-01-04T00:00:00', capital: 11000, drawdownPercent: 0 },
+    { index: 0, capital: 10000, drawdownPercent: 0 },
+    { index: 1, capital: 10500, drawdownPercent: 0 },
+    { index: 2, capital: 10200, drawdownPercent: -2.86 },
+    { index: 3, capital: 11000, drawdownPercent: 0 },
   ]
 
   it('renders empty state when no data', () => {

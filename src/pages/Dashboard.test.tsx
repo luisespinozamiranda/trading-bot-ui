@@ -19,7 +19,16 @@ vi.mock('@/api/hooks/useAccountSnapshot', () => ({
 
 vi.mock('@/api/hooks/useLiveStatus', () => ({
   useLiveStatus: () => ({
-    data: { running: true, symbol: 'BTCUSDT', interval: '1d', currentCapital: 12450, openPositions: 1 },
+    data: {
+      managerRunning: true,
+      wsConnected: true,
+      totalEquity: 12450,
+      cashBalance: 8500,
+      openPositions: 1,
+      engines: [
+        { symbol: 'BTCUSDT', interval: '1d', strategyName: 'rsi_crossover', running: true, hasOpenPosition: true },
+      ],
+    },
   }),
 }))
 
@@ -41,6 +50,9 @@ vi.mock('@/api/hooks/useLiveTrades', () => ({
         realizedPnl: 0, totalEquity: 12450, dailyReturnPercent: 1.2, drawdownFromPeak: -0.5,
       },
     ],
+  }),
+  useTotalSummary: () => ({
+    data: { entries: 24, exits: 23, wins: 14, winRate: 60.9, totalPnl: 2450.23, currentCapital: 12450 },
   }),
 }))
 
@@ -86,7 +98,8 @@ describe('Dashboard', () => {
   it('renders active strategies', () => {
     renderWithProviders(<Dashboard />)
     expect(screen.getByText('Active Strategies')).toBeInTheDocument()
-    expect(screen.getByText('rsi_crossover')).toBeInTheDocument()
+    const strategyElements = screen.getAllByText('rsi_crossover')
+    expect(strategyElements.length).toBeGreaterThan(0)
   })
 
   it('renders recent trades section', () => {

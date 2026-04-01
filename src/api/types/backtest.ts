@@ -5,11 +5,11 @@ export interface TradeDto {
   netProfitPercent: number
   netProfitAmount: number
   totalFees: number
-  capitalAtEntry: number
+  direction: string
   positionSize: number
   entryTime: string
   exitTime: string
-  duration: string
+  durationSeconds: number
 }
 
 export interface BacktestResponse {
@@ -38,7 +38,7 @@ export interface BacktestResponse {
 }
 
 export interface EquityPoint {
-  timestamp: string
+  index: number
   capital: number
   drawdownPercent: number
 }

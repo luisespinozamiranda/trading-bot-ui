@@ -34,11 +34,11 @@ export default function TopBar() {
           <div
             className={cn(
               'w-2 h-2 rounded-full',
-              liveStatus?.running ? 'bg-[var(--color-success)] animate-pulse' : 'bg-[var(--color-text-muted)]',
+              liveStatus?.managerRunning ? 'bg-[var(--color-success)] animate-pulse' : 'bg-[var(--color-text-muted)]',
             )}
           />
           <span className="text-xs text-[var(--color-text-secondary)]">
-            {liveStatus?.running ? 'Engine Running' : 'Engine Stopped'}
+            {liveStatus?.managerRunning ? 'Engine Running' : 'Engine Stopped'}
           </span>
         </div>
 

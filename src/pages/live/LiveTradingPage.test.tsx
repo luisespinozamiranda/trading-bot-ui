@@ -4,7 +4,14 @@ import LiveTradingPage from './LiveTradingPage'
 
 vi.mock('@/api/hooks/useLiveStatus', () => ({
   useLiveStatus: () => ({
-    data: { running: false, symbol: 'BTCUSDT', interval: '1d', currentCapital: 10000, openPositions: 0 },
+    data: {
+      managerRunning: false,
+      wsConnected: false,
+      totalEquity: 10000,
+      cashBalance: 10000,
+      openPositions: 0,
+      engines: [],
+    },
     isLoading: false,
   }),
 }))
@@ -18,6 +25,7 @@ vi.mock('@/api/hooks/useLiveTrades', () => ({
 vi.mock('@/api/hooks/mutations/useLiveMutations', () => ({
   useStartLiveTrading: () => ({ mutate: vi.fn(), isPending: false }),
   useStopLiveTrading: () => ({ mutate: vi.fn(), isPending: false }),
+  useReloadStrategies: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 describe('LiveTradingPage', () => {
@@ -41,10 +49,9 @@ describe('LiveTradingPage', () => {
     expect(screen.getByText('Start Engine')).toBeInTheDocument()
   })
 
-  it('renders configuration fields when stopped', () => {
+  it('shows empty state when no engines', () => {
     renderWithProviders(<LiveTradingPage />)
-    expect(screen.getByDisplayValue('BTCUSDT')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('1d')).toBeInTheDocument()
+    expect(screen.getByText('No active strategy assignments.')).toBeInTheDocument()
   })
 
   it('renders summary metrics', () => {

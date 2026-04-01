@@ -1,7 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import type { EquityPoint } from '@/api/types'
 import { formatCurrency } from '@/lib/utils'
-import { format } from 'date-fns'
 
 interface EquityCurveChartProps {
   data: EquityPoint[]
@@ -19,7 +18,7 @@ export default function EquityCurveChart({ data, initialCapital }: EquityCurveCh
   }
 
   const chartData = data.map((point) => ({
-    date: format(new Date(point.timestamp), 'MM/dd'),
+    date: point.index,
     capital: point.capital,
     drawdown: point.drawdownPercent,
   }))

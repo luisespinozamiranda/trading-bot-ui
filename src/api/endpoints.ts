@@ -22,6 +22,7 @@ const API = {
     trades: '/api/v1/live/trades',
     dailySummary: '/api/v1/live/summary/daily',
     totalSummary: '/api/v1/live/summary/total',
+    reload: '/api/v1/live/reload',
   },
   strategies: {
     list: '/api/v1/strategies',
@@ -40,6 +41,7 @@ const API = {
     backfill: '/api/v1/data/backfill',
     sync: '/api/v1/data/sync',
     status: '/api/v1/data/status',
+    candles: '/api/v1/data/candles',
   },
   settings: {
     list: '/api/v1/settings',

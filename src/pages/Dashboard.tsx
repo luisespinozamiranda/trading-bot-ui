@@ -7,7 +7,7 @@ import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
 import PageHeader from '@/components/shared/PageHeader'
 import { useAccountSnapshot } from '@/api/hooks/useAccountSnapshot'
 import { useLiveStatus } from '@/api/hooks/useLiveStatus'
-import { useLiveTrades } from '@/api/hooks/useLiveTrades'
+import { useLiveTrades, useTotalSummary } from '@/api/hooks/useLiveTrades'
 import { useEnabledStrategies } from '@/api/hooks/useStrategies'
 import { useDailySummaries } from '@/api/hooks/useLiveTrades'
 import { formatCurrency, formatPrice } from '@/lib/utils'
@@ -19,6 +19,7 @@ export default function Dashboard() {
   const { data: trades } = useLiveTrades()
   const { data: activeStrategies } = useEnabledStrategies()
   const { data: dailySummaries } = useDailySummaries()
+  const { data: totalSummary } = useTotalSummary()
 
   const recentTrades = trades?.slice(-5).reverse() ?? []
   const todaySummary = dailySummaries?.at(-1)
@@ -108,21 +109,38 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
               Engine Status
             </h2>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <StatusBadge status={liveStatus?.running ? 'RUNNING' : 'STOPPED'} />
-                {liveStatus?.running && (
-                  <span className="text-xs text-[var(--color-text-secondary)]">
-                    {liveStatus.symbol} / {liveStatus.interval}
-                  </span>
-                )}
+                <StatusBadge status={liveStatus?.managerRunning ? 'RUNNING' : 'STOPPED'} />
+                <StatusBadge status={liveStatus?.wsConnected ? 'WS' : 'WS OFF'} />
               </div>
-              {liveStatus?.running && (
+              {liveStatus?.managerRunning && (
                 <span className="text-sm font-mono text-[var(--color-text-primary)]">
-                  {formatCurrency(liveStatus.currentCapital)}
+                  {formatCurrency(liveStatus.totalEquity)}
                 </span>
               )}
             </div>
+            {liveStatus?.engines?.length ? (
+              <div className="space-y-1">
+                {liveStatus.engines.map((engine) => (
+                  <div
+                    key={`${engine.symbol}-${engine.interval}`}
+                    className="flex items-center justify-between py-1 text-xs"
+                  >
+                    <span className="text-[var(--color-text-primary)]">
+                      {engine.symbol} / {engine.interval}
+                    </span>
+                    <span className="text-[var(--color-text-secondary)]">
+                      {engine.strategyName}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--color-text-muted)] text-center">
+                No engines running
+              </p>
+            )}
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
@@ -255,6 +273,20 @@ export default function Dashboard() {
             trend="negative"
           />
         </div>
+      )}
+
+      {totalSummary && (
+        <>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mt-2">
+            Cumulative Performance
+          </h2>
+          <div className="grid grid-cols-4 gap-4">
+            <MetricCard label="Total Entries" value={totalSummary.entries} format="integer" trend="neutral" />
+            <MetricCard label="Total Exits" value={totalSummary.exits} format="integer" trend="neutral" />
+            <MetricCard label="Win Rate" value={totalSummary.winRate} format="percent" trend="neutral" subtitle={`${totalSummary.wins} wins`} />
+            <MetricCard label="Cumulative P/L" value={totalSummary.totalPnl} format="currency" />
+          </div>
+        </>
       )}
     </div>
   )
