@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Trading Bot",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "tradingbot",
+      "Username": "trading",
+      "Password": "trading",
+      "SSLMode": "prefer",
+      "PassFile": "/tmp/pgpass"
+    }
+  }
+}
